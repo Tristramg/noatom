@@ -87,11 +87,22 @@ int main(int argc, char ** argv)
         >> "durations" >> *(' '|int_p[push_back_a(durations)]) >> eol_p;
 
 
-    std::cout << "Parsing header: " << std::flush; parse_info<iterator_t> info
-        = parse(first, last, header_r); if(!info.hit) { std::cout << "Fail" <<
-            std::endl; return 1; } else if(durations.size() != timesteps) {
-                std::cout << "wrong number of durations" << std::endl; return
-                    1; } else { std::cout << "Ok" << std::endl; }
+    std::cout << "Parsing header: " << std::flush;
+    parse_info<iterator_t> info = parse(first, last, header_r);
+    if(!info.hit)
+    {
+        std::cout << "Fail" << std::endl;
+        return 1;
+    }
+    else if(durations.size() != timesteps)
+    {
+        std::cout << "wrong number of durations" << std::endl;
+        return 1;
+    }
+    else
+    {
+        std::cout << "Ok" << std::endl; 
+    }
 
 
     std::cout << "Parsing demand: " << std::flush;
