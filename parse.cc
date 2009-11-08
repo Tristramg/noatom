@@ -7,10 +7,12 @@
 
 #include "instance.h"
 
+#include <boost/assert.hpp>
 using namespace BOOST_SPIRIT_CLASSIC_NS;
 typedef file_iterator<char>   iterator_t;
 typedef scanner<iterator_t>     scanner_t;
 typedef rule<scanner_t>         rule_t;
+
 
 int main(int argc, char ** argv)
 {
@@ -68,42 +70,26 @@ int main(int argc, char ** argv)
 
     std::cout << "Parsing header: " << std::flush;
     parse_info<iterator_t> info = parse(first, last, header_r);
-    if(!info.hit)
-    {
-        std::cout << "Fail" << std::endl;
-        return 1;
-    }
-    else if(durations.size() != timesteps)
-    {
-        std::cout << "wrong number of durations" << std::endl;
-        return 1;
-    }
-    else
-    {
-        std::cout << "Ok" << std::endl; 
-    }
+    BOOST_ASSERT(info.hit);
+    BOOST_ASSERT(durations.size() == timesteps);
+    std::cout << "Ok" << std::endl; 
 
 
     std::cout << "Parsing demand: " << std::flush;
     std::vector<std::vector<float> > demand(scenario);
 
-    for(int i=0; i < scenario; i++) { demand[i].reserve(timesteps);
+    for(int i=0; i < scenario; i++)
+    {
+        demand[i].reserve(timesteps);
         rule_t demand_r = "demand" >> *(' '|real_p[push_back_a(demand[i])]) >> eol_p;
         info = parse(info.stop, last, demand_r);
-        if(!info.hit)
-        {
-            std::cout << "Fail at scenario " << i << std::endl;
-            return 1;
-        }
-        else if(demand[i].size() != timesteps)
-        {
-            std::cout << "wrong number of demand, scenario" << std::endl;
-            return 1;
-        }
+        BOOST_ASSERT(info.hit);
+        BOOST_ASSERT(demand[i].size() == timesteps);
     }
     std::cout << "Ok" << std::endl;
 
     info = parse(info.stop, last, "end main" >> eol_p);
+    BOOST_ASSERT(info.hit);
     std::cout << "Main section done" << std::endl << std::endl;
 
     std::cout << "Parsing Powerplant type1: " << std::flush;
@@ -118,39 +104,21 @@ int main(int argc, char ** argv)
             >> "timesteps " >> int_p >> eol_p;
 
         info = parse(info.stop, last, type1_r);
-        if(!info.hit)
-        {
-            std::cout << "Fail header of powerplant #" << i << std::endl;
-            return 1;
-        }
+        BOOST_ASSERT(info.hit);
 
         for(int s=0; s < scenario; s++)
         {
-
             rule_t data_r = "pmin" >> *(' '|real_p[push_back_a(plants1[i].pmin[s])]) >> eol_p
                 >> "pmax" >> *(' '|real_p[push_back_a(plants1[i].pmax[s])]) >> eol_p
                 >> "cost" >> *(' '|real_p[push_back_a(plants1[i].cost[s])]) >> eol_p;
             info = parse(info.stop, last, data_r);
-            if(!info.hit)
-            {
-                std::cout << "Fail data of powerplant #" << i << std::endl;
-                return 1;
-            }
-            else if(plants1[i].pmin[s].size() != timesteps
-                    || plants1[i].pmax[s].size() != timesteps
-                    || plants1[i].cost[s].size() != timesteps)
-            {
-                std::cout << "Wrong number of data of powerplant #" << i << " and scenario #" << s << std::endl;
-                return 1;
-            }
+            BOOST_ASSERT(info.hit);
+            BOOST_ASSERT(plants1[i].pmin[s].size() == timesteps);
+            BOOST_ASSERT(plants1[i].pmax[s].size() == timesteps);
+            BOOST_ASSERT(plants1[i].cost[s].size() == timesteps);
         }
         info = parse(info.stop, last, "end powerplant" >> eol_p);
-        if(!info.hit)
-        {
-            std::cout << "Missing \"end powerplant\" of powerplant #" << i << std::endl;
-            return 1;
-        }
-
+        BOOST_ASSERT(info.hit);
     }
     std::cout << "Ok" << std::endl;
 
@@ -182,11 +150,7 @@ int main(int argc, char ** argv)
             >> "decrease_profile" >> *(' ' >> int_p[push_back_a(plants2[i].current_decrease_profile_idx)] >> ' ' >> real_p[push_back_a(plants2[i].current_decrease_profile_val)]) >> eol_p
             >> "end current_campaign_profile" >> eol_p;
         info = parse(info.stop, last, type2_r);
-        if(!info.hit)
-        {
-            std::cout << "Fail header of powerplant #" << i << std::endl;
-            return 1;
-        }
+        BOOST_ASSERT(info.hit);
 
         plants2[i].decrease_profile_idx.resize(plants2[i].campaigns);
         plants2[i].decrease_profile_val.resize(plants2[i].campaigns);
@@ -200,14 +164,10 @@ int main(int argc, char ** argv)
                 >> "end profile" >> eol_p;
 
             info = parse(info.stop, last, profile_r);
-            if(!info.hit)
-            {
-                std::cout << "Fail data of powerplant #" << i << std::endl;
-                return 1;
-            }
+            BOOST_ASSERT(info.hit);
         }
         info = parse(info.stop, last, "end powerplant" >> eol_p);
-
+        BOOST_ASSERT(info.hit);
     }
     std::cout << "Ok" << std::endl;
     return 0;
