@@ -29,7 +29,7 @@ int main(int argc, char ** argv)
     }
     file_iterator<> last = first.make_end();
 
-    int timesteps = 0;
+    size_t timesteps = 0;
     int weeks = 0;
     int campaigns = 0;
     int scenario = 0;
