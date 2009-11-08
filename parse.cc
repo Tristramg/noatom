@@ -5,33 +5,12 @@
 #include <boost/spirit/include/classic_file_iterator.hpp>
 #include <boost/spirit/include/classic_push_back_actor.hpp>
 
+#include "instance.h"
+
 using namespace BOOST_SPIRIT_CLASSIC_NS;
 typedef file_iterator<char>   iterator_t;
 typedef scanner<iterator_t>     scanner_t;
 typedef rule<scanner_t>         rule_t;
-
-struct Powerplant_t1
-{
-    std::string name;
-    int index;
-    std::deque<std::vector<float> > pmin;
-    std::deque<std::vector<float> > pmax;
-    std::deque<std::vector<float> > cost;
-
-    Powerplant_t1(size_t scenarios, size_t timesteps) :
-        pmin(scenarios),
-        pmax(scenarios),
-        cost(scenarios)
-    {
-        for(size_t i=0; i < scenarios; i++)
-        {
-            pmin[i].reserve(timesteps);
-            pmax[i].reserve(timesteps);
-            cost[i].reserve(timesteps);
-        }
-    }
-
-};
 
 int main(int argc, char ** argv)
 {
@@ -175,6 +154,62 @@ int main(int argc, char ** argv)
     }
     std::cout << "Ok" << std::endl;
 
+    std::cout << "Parsing Powerplant type2: " << std::flush;
+    std::deque<Powerplant_t2> plants2 (powerplant2, Powerplant_t2());
+    for(int i=0; i < powerplant2; i++)
+    {
+        rule_t type2_r = "begin powerplant" >> eol_p
+            >> "name " >> (*~space_p)[assign_a(plants2[i].name)] >> eol_p
+            >> "type 2" >> eol_p
+            >> "index " >> int_p[assign_a(plants2[i].index)] >> eol_p
+            >> "stock " >> real_p[assign_a(plants2[i].stock)] >> eol_p
+            >> "campaigns " >> int_p[assign_a(plants2[i].campaigns)] >> eol_p
+            >> "durations" >> *(' '|int_p[push_back_a(plants2[i].durations)]) >> eol_p 
+            >> "current_campaign_max_modulus " >> int_p[assign_a(plants2[i].current_max_modulus)] >> eol_p
+            >> "max_modulus" >> *(' '|int_p[push_back_a(plants2[i].max_modulus)]) >> eol_p
+            >> "max_refuel" >> *(' '|int_p[push_back_a(plants2[i].max_refuel)]) >> eol_p
+            >> "min_refuel" >> *(' '|int_p[push_back_a(plants2[i].min_refuel)]) >> eol_p
+            >> "refuel_ratio" >> *(' '|int_p[push_back_a(plants2[i].refuel_ratio)]) >> eol_p
+            >> "current_campaign_stock_threshold " >> int_p[assign_a(plants2[i].current_stock_threshold)] >> eol_p
+            >> "stock_threshold" >> *(' '|int_p[push_back_a(plants2[i].stock_threshold)]) >> eol_p
+            >> "pmax" >> *(' '|real_p[push_back_a(plants2[i].pmax)]) >> eol_p
+            >> "max_stock_before_refueling" >> *(' '|int_p[push_back_a(plants2[i].max_stock_before_refueling)]) >> eol_p
+            >> "max_stock_after_refueling" >> *(' '|int_p[push_back_a(plants2[i].max_stock_after_refueling)]) >> eol_p
+            >> "refueling_cost" >> *(' '|real_p[push_back_a(plants2[i].refueling_cost)]) >> eol_p
+            >> "fuel_price " >> real_p[assign_a(plants2[i].fuel_price)] >> eol_p
+            >> "begin current_campaign_profile" >> eol_p
+            >> "profile_points " >> int_p >> eol_p
+            >> "decrease_profile" >> *(' ' >> int_p[push_back_a(plants2[i].current_decrease_profile_idx)] >> ' ' >> real_p[push_back_a(plants2[i].current_decrease_profile_val)]) >> eol_p
+            >> "end current_campaign_profile" >> eol_p;
+        info = parse(info.stop, last, type2_r);
+        if(!info.hit)
+        {
+            std::cout << "Fail header of powerplant #" << i << std::endl;
+            return 1;
+        }
+
+        plants2[i].decrease_profile_idx.resize(plants2[i].campaigns);
+        plants2[i].decrease_profile_val.resize(plants2[i].campaigns);
+        int profile_points;
+        for(int s=0; s < plants2[i].campaigns; s++)
+        {
+            rule_t profile_r = "begin profile" >> eol_p
+                >> "campaign_profile " >> int_p >> eol_p
+                >> "profile_points " >> int_p[assign_a(profile_points)] >> eol_p
+                >> "decrease_profile" >> *(' ' >> int_p[push_back_a(plants2[i].decrease_profile_idx[s])] >> ' ' >> real_p[push_back_a(plants2[i].decrease_profile_val[s])]) >> eol_p
+                >> "end profile" >> eol_p;
+
+            info = parse(info.stop, last, profile_r);
+            if(!info.hit)
+            {
+                std::cout << "Fail data of powerplant #" << i << std::endl;
+                return 1;
+            }
+        }
+        info = parse(info.stop, last, "end powerplant" >> eol_p);
+
+    }
+    std::cout << "Ok" << std::endl;
     return 0;
 }
 
