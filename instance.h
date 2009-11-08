@@ -49,4 +49,12 @@ struct Powerplant_t2
     std::vector<std::vector<float> > decrease_profile_val;
 };
 
+struct Constraint_13
+{
+    int powerplant_idx;
+    int campaign_idx;
+    int earliest_stop_time;
+    int latest_stop_time;
+};
+
 #endif

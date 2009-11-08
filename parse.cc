@@ -1,5 +1,4 @@
 #include <iostream>
-#include <deque>
 #include <boost/spirit/include/classic_core.hpp>
 #include <boost/spirit/include/classic_lists.hpp> 
 #include <boost/spirit/include/classic_file_iterator.hpp>
@@ -46,7 +45,7 @@ int main(int argc, char ** argv)
     int constraint19 = 0;
     int constraint20 = 0;
     int constraint21 = 0;
-    std::deque<int> durations;
+    std::vector<int> durations;
 
     rule_t header_r = "begin main" >> eol_p
         >> "timesteps " >> int_p[assign_a(timesteps)] >> eol_p
@@ -93,7 +92,7 @@ int main(int argc, char ** argv)
     std::cout << "Main section done" << std::endl << std::endl;
 
     std::cout << "Parsing Powerplant type1: " << std::flush;
-    std::deque<Powerplant_t1> plants1 (powerplant1, Powerplant_t1(scenario, timesteps));
+    std::vector<Powerplant_t1> plants1 (powerplant1, Powerplant_t1(scenario, timesteps));
     for(int i=0; i < powerplant1; i++)
     {
         rule_t type1_r = "begin powerplant" >> eol_p
@@ -123,7 +122,7 @@ int main(int argc, char ** argv)
     std::cout << "Ok" << std::endl;
 
     std::cout << "Parsing Powerplant type2: " << std::flush;
-    std::deque<Powerplant_t2> plants2 (powerplant2, Powerplant_t2());
+    std::vector<Powerplant_t2> plants2 (powerplant2, Powerplant_t2());
     for(int i=0; i < powerplant2; i++)
     {
         rule_t type2_r = "begin powerplant" >> eol_p
@@ -170,6 +169,26 @@ int main(int argc, char ** argv)
         BOOST_ASSERT(info.hit);
     }
     std::cout << "Ok" << std::endl;
+
+    std::cout << "Parsing constraints type 13: " << std::flush;
+    std::vector<Constraint_13> ct13(constraint13);
+    for(int i=0; i < constraint13; i++)
+    {
+        rule_t ct13_r = "begin constraint" >> eol_p
+            >> "type 13" >> eol_p
+            >> "index " >> int_p >> eol_p
+            >> "powerplant " >> int_p[assign_a(ct13[i].powerplant_idx)] >> eol_p
+            >> "campaign " >> int_p[assign_a(ct13[i].campaign_idx)] >> eol_p
+            >> "earliest_stop_time " >> int_p[assign_a(ct13[i].earliest_stop_time)] >> eol_p
+            >> "latest_stop_time " >> int_p[assign_a(ct13[i].latest_stop_time)] >> eol_p
+            >> "end constraint" >> eol_p;
+        info = parse(info.stop, last, ct13_r);
+        BOOST_ASSERT(info.hit);
+    }
+    std::cout << "Ok" << std::endl;
+
+
+
     return 0;
 }
 
