@@ -16,7 +16,7 @@ int main(int argc, char ** argv)
 {
     if(argc != 2)
     {
-        std::cout << "Use: " << argv[0] << " data_file" << std::endl;
+        std::cout << "Use: " << argv[0] << " data_file " << std::endl;
         return 1;
     }
 
