@@ -5,13 +5,44 @@
 #include <boost/spirit/include/classic_push_back_actor.hpp>
 
 #include "instance.h"
-
+#include "coin/ClpSimplex.hpp"
 #include <boost/assert.hpp>
 using namespace BOOST_SPIRIT_CLASSIC_NS;
 typedef file_iterator<char>   iterator_t;
 typedef scanner<iterator_t>     scanner_t;
 typedef rule<scanner_t>         rule_t;
 
+struct VarIndex
+{
+    int offset;
+    static int max;
+    int max1, max2, max3;
+
+    VarIndex(int max1, int max2, int max3) : offset(max), max1(max1), max2(max2), max3(max3)
+    {
+        max += max1 * max2 * max3;
+    }
+
+    VarIndex(int max1, int max2) : offset(max), max1(max1), max2(max2), max3(1)
+    {
+        max *= max1 * max2 * max3;
+    }
+
+    int operator()(int v1, int v2) const
+    {
+        return this->operator()(v1, v2, 0);
+    }
+
+    int operator()(int v1, int v2, int v3) const
+    {
+        BOOST_ASSERT(v1 < max1);
+        BOOST_ASSERT(v2 < max2);
+        BOOST_ASSERT(v3 < max3);
+        return offset + v1 + v2 * max1 + v3 * max1 * max2; 
+    }
+};
+
+int VarIndex::max = 0;
 
 int main(int argc, char ** argv)
 {
@@ -75,7 +106,7 @@ int main(int argc, char ** argv)
 
 
     std::cout << "Parsing demand: " << std::flush;
-    std::vector<std::vector<float> > demand(scenario);
+    std::vector<std::vector<double> > demand(scenario);
 
     for(int i=0; i < scenario; i++)
     {
@@ -278,7 +309,7 @@ int main(int argc, char ** argv)
 
         ct19[i].periods.resize(ct19[i].set.size());
 
-        for(int j=0; j < ct19[i].set.size(); j++)
+        for(size_t j=0; j < ct19[i].set.size(); j++)
         {
             ct19_r = "begin period" >> eol_p
                 >> "powerplant " >> int_p[assign_a(ct19[i].periods[j].powerplant)] >> eol_p
@@ -326,6 +357,111 @@ int main(int argc, char ** argv)
     }
     std::cout << "Ok" << std::endl;
 
+
+
+    //Let's manage the variables !
+    VarIndex p1(powerplant1, timesteps, scenario); //p(j,t,s)
+    VarIndex p2(powerplant2, timesteps, scenario); //p(i,t,s)
+    VarIndex r(powerplant2, campaigns); // r(i,k)
+    VarIndex x(powerplant2, timesteps, scenario); //x(i, t, s)
+    int numCols = timesteps * scenario * powerplant1 // p(j,t,s)
+        + timesteps * scenario * powerplant2 // p(i,t,s)
+        + campaigns * powerplant2 // r(i,k)
+        + timesteps * scenario * powerplant2; //x(i,t,s)
+
+    std::vector<double> objective(numCols, 0);
+    std::vector<double> colLower(numCols, 0);
+    std::vector<double> colUpper(numCols, DBL_MAX);
+
+    //Set the objectives
+    for(int i = 0; i < powerplant1; i++)
+    {
+        for(int k = 0; k < campaigns; k++)
+        {
+            objective[r(i,k)] = plants2[i].refueling_cost[k];
+        }
+    }
+
+    for(int s = 0; s < scenario; s++)
+    {
+        for(size_t t = 0; t < timesteps; t++)
+        {
+            for(int j = 0; j < powerplant1; j++)
+            {
+                objective[p1(j,t,s)] = plants1[j].cost[s][t] * durations[t] / scenario;
+            }
+        }
+        for(int i = 0; i < powerplant2; i++)
+        {
+            // ATTENTION : est-ce que c'est vraiment 1 ?
+            objective[x(i,timesteps - 1, s)] = - plants2[i].fuel_price / scenario;
+        }
+    }
+
+    //[CT2] Min and max production on Type 1 plants
+    for(int j = 0; j < powerplant1; j++)
+    {
+        for(size_t t = 0; t < timesteps; t++)
+        {
+            for(int s = 0; s < scenario; s++)
+            {
+                colLower[p1(j,t,s)] = plants1[j].pmin[s][t];
+                colUpper[p1(j,t,s)] = plants1[j].pmax[s][t];
+            }
+        }
+    }
+
+    //[CT8] Initial fuel stock
+    for(int i = 0; i < powerplant2; i++)
+    {
+        for(int s = 0; s < scenario; s++)
+        {
+            colLower[x(i,0,s)] = plants2[i].stock;
+            colUpper[x(i,0,s)] = plants2[i].stock;
+        }
+    }
+
+    std::vector<int> rows;
+    std::vector<int> cols;
+    std::vector<double> vals;
+    std::vector<double> rowLower;
+    std::vector<double> rowUpper;
+
+    rows.reserve(scenario*timesteps*(powerplant1 + powerplant2));
+    cols.reserve(scenario*timesteps*(powerplant1 + powerplant2));
+    vals.reserve(scenario*timesteps*(powerplant1 + powerplant2));
+    rowLower.reserve(scenario*timesteps);
+    rowUpper.reserve(scenario*timesteps);
+    
+    //[CT1] Production must meet load
+    int row = 0;
+    for(int s = 0; s < scenario; s++)
+    {
+        for(size_t t = 0; t < timesteps; t++)
+        {
+            for(int j = 0; j < powerplant1; j++)
+            {
+                rows.push_back(row);
+                cols.push_back(p1(j,t,s));
+                vals.push_back(1);
+            }
+            for(int i = 0; i < powerplant2; i++)
+            {
+                rows.push_back(row);
+                cols.push_back(p2(i,t,s));
+                vals.push_back(1);
+            }
+            rowLower.push_back(demand[s][t]);
+            rowUpper.push_back(demand[s][t]);
+            row++;
+        }
+    }
+
+    CoinPackedMatrix constraints(true, &rows[0], &cols[0], &vals[0], rows.size());
+
+    ClpSimplex modele;
+
+    modele.loadProblem(constraints, &colLower[0], &colUpper[0], &objective[0], &rowLower[0], &rowUpper[0]);
 
 
     return 0;
