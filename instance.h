@@ -57,4 +57,65 @@ struct Constraint_13
     int latest_stop_time;
 };
 
+struct Constraint_14
+{
+    std::vector<int> set;
+    int spacing;
+};
+
+struct Constraint_15
+{
+    std::vector<int> set;
+    int spacing;
+    int first_week;
+    int last_week;
+};
+
+struct Constraint_16
+{
+    std::vector<int> set;
+    int spacing;
+};
+
+struct Constraint_17
+{
+    std::vector<int> set;
+    int spacing;
+};
+
+struct Constraint_18
+{
+    std::vector<int> set;
+    int spacing;
+};
+
+struct Constraint_19_period
+{
+    int powerplant;
+    std::vector<int> start;
+    std::vector<int> duration;
+};
+
+struct Constraint_19
+{
+    std::vector<int> set;
+    int quantity;
+    std::vector<Constraint_19_period> periods;
+};
+
+struct Constraint_20
+{
+    std::vector<int> set;
+    int week;
+    int max;
+};
+
+struct Constraint_21
+{
+    std::vector<int> set;
+    int start;
+    int end;
+    float max;
+};
+
 #endif

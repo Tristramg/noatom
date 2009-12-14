@@ -187,6 +187,145 @@ int main(int argc, char ** argv)
     }
     std::cout << "Ok" << std::endl;
 
+    std::cout << "Parsing constraints type 14: " << std::flush;
+    std::vector<Constraint_14> ct14(constraint14);
+    for(int i=0; i < constraint14; i++)
+    {
+        rule_t ct14_r = "begin constraint" >> eol_p
+            >> "type 14" >> eol_p
+            >> "index " >> int_p >> eol_p
+            >> "set" >> *(' '|int_p[push_back_a(ct14[i].set)]) >> eol_p
+            >> "spacing " >> int_p[assign_a(ct14[i].spacing)] >> eol_p
+            >> "end constraint" >> eol_p;
+        info = parse(info.stop, last, ct14_r);
+        BOOST_ASSERT(info.hit);
+    }
+    std::cout << "Ok" << std::endl;
+
+    std::cout << "Parsing constraints type 15: " << std::flush;
+    std::vector<Constraint_15> ct15(constraint15);
+    for(int i=0; i < constraint15; i++)
+    {
+        rule_t ct15_r = "begin constraint" >> eol_p
+            >> "type 15" >> eol_p
+            >> "index " >> int_p >> eol_p
+            >> "set" >> *(' '|int_p[push_back_a(ct15[i].set)]) >> eol_p
+            >> "spacing " >> int_p[assign_a(ct15[i].spacing)] >> eol_p
+            >> "first_week_of_the_constraint " >> int_p[assign_a(ct15[i].first_week)] >> eol_p
+            >> "last_week_of_the_constraint " >> int_p[assign_a(ct15[i].last_week)] >> eol_p
+            >> "end constraint" >> eol_p;
+        info = parse(info.stop, last, ct15_r);
+        BOOST_ASSERT(info.hit);
+    }
+    std::cout << "Ok" << std::endl;
+
+    std::cout << "Parsing constraints type 16: " << std::flush;
+    std::vector<Constraint_16> ct16(constraint16);
+    for(int i=0; i < constraint16; i++)
+    {
+        rule_t ct16_r = "begin constraint" >> eol_p
+            >> "type 16" >> eol_p
+            >> "index " >> int_p >> eol_p
+            >> "set" >> *(' '|int_p[push_back_a(ct16[i].set)]) >> eol_p
+            >> "spacing " >> int_p[assign_a(ct16[i].spacing)] >> eol_p
+            >> "end constraint" >> eol_p;
+        info = parse(info.stop, last, ct16_r);
+        BOOST_ASSERT(info.hit);
+    }
+    std::cout << "Ok" << std::endl;
+
+    std::cout << "Parsing constraints type 17: " << std::flush;
+    std::vector<Constraint_17> ct17(constraint17);
+    for(int i=0; i < constraint17; i++)
+    {
+        rule_t ct17_r = "begin constraint" >> eol_p
+            >> "type 17" >> eol_p
+            >> "index " >> int_p >> eol_p
+            >> "set" >> *(' '|int_p[push_back_a(ct17[i].set)]) >> eol_p
+            >> "spacing " >> int_p[assign_a(ct17[i].spacing)] >> eol_p
+            >> "end constraint" >> eol_p;
+        info = parse(info.stop, last, ct17_r);
+        BOOST_ASSERT(info.hit);
+    }
+    std::cout << "Ok" << std::endl;
+
+    std::cout << "Parsing constraints type 18: " << std::flush;
+    std::vector<Constraint_18> ct18(constraint18);
+    for(int i=0; i < constraint18; i++)
+    {
+        rule_t ct18_r = "begin constraint" >> eol_p
+            >> "type 18" >> eol_p
+            >> "index " >> int_p >> eol_p
+            >> "set" >> *(' '|int_p[push_back_a(ct18[i].set)]) >> eol_p
+            >> "spacing " >> int_p[assign_a(ct18[i].spacing)] >> eol_p
+            >> "end constraint" >> eol_p;
+        info = parse(info.stop, last, ct18_r);
+        BOOST_ASSERT(info.hit);
+    }
+    std::cout << "Ok" << std::endl;
+
+    std::cout << "Parsing constraints type 19: " << std::flush;
+    std::vector<Constraint_19> ct19(constraint19);
+    for(int i=0; i < constraint19; i++)
+    {
+        rule_t ct19_r = "begin constraint" >> eol_p
+            >> "type 19" >> eol_p
+            >> "index " >> int_p >> eol_p
+            >> "quantity " >> int_p[assign_a(ct19[i].quantity)] >> eol_p
+            >> "set" >> *(' '|int_p[push_back_a(ct19[i].set)]) >> eol_p;
+        info = parse(info.stop, last, ct19_r);
+        BOOST_ASSERT(info.hit);
+
+        ct19[i].periods.resize(ct19[i].set.size());
+
+        for(int j=0; j < ct19[i].set.size(); j++)
+        {
+            ct19_r = "begin period" >> eol_p
+                >> "powerplant " >> int_p[assign_a(ct19[i].periods[j].powerplant)] >> eol_p
+                >> "start" >> *(' '|int_p[push_back_a(ct19[i].periods[j].start)]) >> eol_p
+                >> "duration" >> *(' '|int_p[push_back_a(ct19[i].periods[j].duration)]) >> eol_p
+                >> "end period" >> eol_p;
+            info = parse(info.stop, last, ct19_r);
+            BOOST_ASSERT(info.hit);
+        }
+        info = parse(info.stop, last, "end constraint" >> eol_p);
+        BOOST_ASSERT(info.hit);
+    }
+    std::cout << "Ok" << std::endl;
+
+    std::cout << "Parsing constraints type 20: " << std::flush;
+    std::vector<Constraint_20> ct20(constraint20);
+    for(int i=0; i < constraint20; i++)
+    {
+        std::string foo;
+        rule_t ct20_r = "begin constraint" >> eol_p
+            >> "type 20" >> eol_p
+            >> "index " >> int_p >> eol_p
+            >> "week " >> int_p[assign_a(ct20[i].week)] >> eol_p
+            >> "set" >> *(' '|int_p[push_back_a(ct20[i].set)]) >> eol_p
+            >> "max " >> int_p[assign_a(ct20[i].max)] >> eol_p
+            >> "end constraint" >> eol_p;
+        info = parse(info.stop, last, ct20_r);
+        BOOST_ASSERT(info.hit);
+    }
+    std::cout << "Ok" << std::endl;
+
+    std::cout << "Parsing constraints type 21: " << std::flush;
+    std::vector<Constraint_21> ct21(constraint21);
+    for(int i=0; i < constraint21; i++)
+    {
+        rule_t ct21_r = "begin constraint" >> eol_p
+            >> "type 21" >> eol_p
+            >> "index " >> int_p >> eol_p
+            >> "set" >> *(' '|int_p[push_back_a(ct21[i].set)]) >> eol_p
+            >> "startend " >> int_p[assign_a(ct21[i].start)] >> " " >> int_p[assign_a(ct21[i].end)] >> eol_p
+            >> "max " >> real_p[assign_a(ct21[i].end)] >> eol_p
+            >> "end constraint" >> *eol_p;
+        info = parse(info.stop, last, ct21_r);
+        BOOST_ASSERT(info.hit);
+    }
+    std::cout << "Ok" << std::endl;
+
 
 
     return 0;
