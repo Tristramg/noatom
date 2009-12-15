@@ -374,7 +374,7 @@ int main(int argc, char ** argv)
     std::vector<double> colUpper(numCols, DBL_MAX);
 
     //Set the objectives
-    for(int i = 0; i < powerplant1; i++)
+    for(int i = 0; i < powerplant2; i++)
     {
         for(int k = 0; k < campaigns; k++)
         {
