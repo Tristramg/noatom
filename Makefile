@@ -5,8 +5,8 @@ EXEC=noatom
 
 all: $(EXEC)
 
-noatom: parse.o
-	$(CXX) -o $@ $< $(LDFLAGS)
+noatom: parse.o instance.o
+	$(CXX) -o $@ $^ $(LDFLAGS)
 
 %.o: %.c
 	$(CXX) -o $@ -c $< $(CXXFLAGS)

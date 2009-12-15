@@ -1,7 +1,11 @@
 #include<vector>
+#include<string>
 
 #ifndef INSTANCE_H
 #define INSTANCE_H
+
+struct file_problem{};
+
 struct Powerplant_t1
 {
     std::string name;
@@ -116,6 +120,43 @@ struct Constraint_21
     int start;
     int end;
     float max;
+};
+
+struct Instance
+{
+    Instance(char * filename);
+
+    size_t timesteps;
+    int weeks;
+    int campaigns;
+    int scenario;
+    float epsilon;
+    int powerplant1;
+    int powerplant2;
+    int constraint13;
+    int constraint14;
+    int constraint15;
+    int constraint16;
+    int constraint17;
+    int constraint18;
+    int constraint19;
+    int constraint20;
+    int constraint21;
+    std::vector<int> durations;
+    std::vector<std::vector<double> > demand;
+
+    std::vector<Powerplant_t1> plants1;
+    std::vector<Powerplant_t2> plants2;
+
+    std::vector<Constraint_13> ct13;
+    std::vector<Constraint_14> ct14;
+    std::vector<Constraint_15> ct15;
+    std::vector<Constraint_16> ct16;
+    std::vector<Constraint_17> ct17;
+    std::vector<Constraint_18> ct18;
+    std::vector<Constraint_19> ct19;
+    std::vector<Constraint_20> ct20;
+    std::vector<Constraint_21> ct21;
 };
 
 #endif
