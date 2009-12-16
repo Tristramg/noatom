@@ -5,10 +5,10 @@ EXEC=noatom
 
 all: $(EXEC)
 
-noatom: parse.o instance.o
+noatom: parse.o instance.o outages.o
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
-%.o: %.c
+%.o: %.c %.h
 	$(CXX) -o $@ -c $< $(CXXFLAGS)
 
 clean:

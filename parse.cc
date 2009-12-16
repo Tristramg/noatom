@@ -1,4 +1,5 @@
 #include "instance.h"
+#include "outages.h"
 
 #include "coin/ClpSimplex.hpp"
 
@@ -88,6 +89,19 @@ int main(int argc, char ** argv)
         }
     }
 
+    //[CT5] Max production on Type 2 plants
+    // Attention !!! y'a les conditions qui sont bizares. On suppose ici qu'on a tjs pmax, outage ou non
+    for(int i = 0; i < data.powerplant2; i++)
+    {
+        for(size_t t = 0; t < data.timesteps; t++)
+        {
+            for(int s = 0; s < data.scenario; s++)
+            {
+                colUpper[p2(i,t,s)] = data.plants2[i].pmax[i];
+            }
+        }
+    }
+
     //[CT8] Initial fuel stock
     for(int i = 0; i < data.powerplant2; i++)
     {
@@ -131,6 +145,49 @@ int main(int argc, char ** argv)
             rowLower.push_back(data.demand[s][t]);
             rowUpper.push_back(data.demand[s][t]);
             row++;
+        }
+    }
+
+    //[CT4] Minimum power: production must be positive
+    // Skiped - taken in account by the bounds on variables
+
+
+    // From this point, the constraints will change during resolution
+
+    Outages out(data);
+
+    //[CT3] during outages, production must be 0
+    for(int i = 0; i < data.powerplant2; i++)
+    {
+        for(int k = 0; k < data.campaigns; k++)
+        {
+            std::vector<int> out_t = out.ea(i,k);
+            for(int s = 0; s < data.scenario; s++)
+            {
+                //TODO: remplacer par des foreach (scrogneugneu de train sans internet)
+                for(std::vector<int>::const_iterator it = out_t.begin(); it != out_t.end(); it++)
+                {
+                    colUpper[p2(i,*it,s)] = 0;
+                }
+            }
+        }
+    }
+
+    //[CT7] Lower & Upper bound on refueling
+    for(int i = 0; i < data.powerplant2; i++)
+    {
+        for(int k = 0; k < data.campaigns; k++)
+        {
+            if(out.ha(i,k) >= 0)
+            {
+                colLower[r(i,k)] = data.plants2[i].min_refuel[k];
+                colUpper[r(i,k)] = data.plants2[i].max_refuel[k];
+            }
+            else
+            {
+                colLower[r(i,k)] = 0;
+                colUpper[r(i,k)] = 0;
+            }
         }
     }
 
