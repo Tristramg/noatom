@@ -14,8 +14,8 @@ class Outages
     const Instance & data;
     public:
     Outages(const Instance &);
-    std::vector<int> ea(int i, int k) const;
-    std::vector<int> ec(int i, int k) const;
+    std::vector<size_t> ea(int i, int k) const;
+    std::vector<size_t> ec(int i, int k) const;
     int ha(int i, int k) const;
 
 };

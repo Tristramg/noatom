@@ -20,16 +20,16 @@ Outages::Outages(const Instance & data) : data(data)
 }
 
 // Outage timesteps
-std::vector<int> Outages::ea(int i, int k) const
+std::vector<size_t> Outages::ea(int i, int k) const
 {
-    int steps_per_week = data.timesteps / data.weeks;
-    std::vector<int> ret;
+    size_t steps_per_week = data.timesteps / data.weeks;
+    std::vector<size_t> ret;
     if(decoupling[i][k] >= 0)
     {
-        int start = (campaign_start[i][k] + decoupling[i][k]) * steps_per_week;
-        int end = start + data.plants2[i].durations.at(k) * steps_per_week;
+        size_t start = (campaign_start[i][k] + decoupling[i][k]) * steps_per_week;
+        size_t end = start + data.plants2[i].durations.at(k) * steps_per_week;
         //Attention ! Vérifier la borne sup
-        for(int t = start; t <= end; t++)
+        for(size_t t = start; t <= end; t++)
         {
             ret.push_back(t);
         }
@@ -39,22 +39,22 @@ std::vector<int> Outages::ea(int i, int k) const
 }
 
 // Production timesteps
-std::vector<int> Outages::ec(int i, int k) const
+std::vector<size_t> Outages::ec(int i, int k) const
 {
     int steps_per_week = data.timesteps / data.weeks;
-    std::vector<int> ret;
+    std::vector<size_t> ret;
     if(decoupling[i][k] >= 0)
     {
-        int start = campaign_start[i][k] * steps_per_week;
-        int end;
+        size_t start = campaign_start[i][k] * steps_per_week;
+        size_t end;
         if(k >= data.campaigns - 1)
             end = data.timesteps;
         else
             end = campaign_start[i][k+1] * steps_per_week;
-        int dec_start = (campaign_start[i][k] + decoupling[i][k]) * steps_per_week;
-        int dec_end = start + data.plants2[i].durations.at(k) * steps_per_week;
+        size_t dec_start = (campaign_start[i][k] + decoupling[i][k]) * steps_per_week;
+        size_t dec_end = start + data.plants2[i].durations.at(k) * steps_per_week;
 
-        for(int t = start; t <= end; t++)
+        for(size_t t = start; t <= end; t++)
         {
             //Attention ! Vérifier la borne sup
             if( t < dec_start || t > dec_end)
