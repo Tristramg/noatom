@@ -1,11 +1,12 @@
 CXX=g++
-CXXFLAGS=-W -Wall -ansi -pedantic -g -Wno-deprecated 
+CXXFLAGS=-W -Wall -ansi -pedantic -O3 -Wno-deprecated 
 LDFLAGS=-lClp -lCoinUtils
+LDFLAGS=-lgecodeint -lgecodesearch -lgecodekernel -lgecodesupport -lgecodescheduling -lgecodegist -lgecodedriver
 EXEC=noatom
 
 all: $(EXEC)
 
-noatom: parse.o instance.o outages.o
+noatom: constraints.o instance.o
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 %.o: %.c %.h

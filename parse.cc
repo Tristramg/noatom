@@ -180,7 +180,7 @@ int main(int argc, char ** argv)
             }
         }
     }
-
+/*
     //CT-perso. During outages, stock must be constant !
     for(int i = 0; i < data.powerplant2; i++)
     {
@@ -210,7 +210,7 @@ int main(int argc, char ** argv)
             }
         }
     }
-
+*/
 
     
     //[CT7] Lower & Upper bound on refueling
@@ -349,7 +349,7 @@ int main(int argc, char ** argv)
     CoinPackedMatrix constraints(true, &rows[0], &cols[0], &vals[0], rows.size());
 
     ClpSimplex modele;
-//    modele.setOptimizationDirection(-1);
+    modele.setOptimizationDirection(1);
 //    modele.setInfeasibilityCost(10e13);
     modele.setPrimalTolerance(1e-4);
     modele.setDualTolerance(1e-4);
@@ -376,12 +376,10 @@ int main(int argc, char ** argv)
     if(modele.isProvenPrimalInfeasible())
     {
         std::cout << "Proven infeasible :'(" << std::endl;
-        const double * dual = modele.infeasibilityRay();
-        for(int i=0; i < modele.getNumRows(); i++)
-        {
-            if(dual[i] != 0)
-                std::cout << i << ":" << dual[i] << " " << ct[i] << std::endl;
-        }
+    }
+    else if(!modele.isProvenOptimal())
+    {
+        std::cout << "... but not proven optimal" << std::endl;
     }
     else
         std::cout << "Lower bound="  << modele.objectiveValue() << std::endl;
@@ -391,12 +389,6 @@ int main(int argc, char ** argv)
         std::cout << "Proven dual infeasible!" << std::endl;
         std::cout << "Sum of dual infeasibilities: " << modele.sumDualInfeasibilities() << std::endl;
         std::cout << "Num of dual infeasibilities: " << modele.numberDualInfeasibilities() << std::endl;
-        const double * dual = modele.dualColumnSolution();
-        for(int i=0; i < modele.getNumCols(); i++)
-        {
-            if(dual[i] != 0)
-                std::cout << i << ":" << dual[i] << " "  << std::endl;
-        }
  
     }
     double * columnPrimal = modele.primalColumnSolution();
