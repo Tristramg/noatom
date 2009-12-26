@@ -1,9 +1,6 @@
 #include "instance.h"
 
-#include "gecode/minimodel.hh"
-#include "gecode/kernel.hh"
 #include "gecode/int.hh"
-#include "gecode/search.hh"
 #include <gecode/driver.hh>
 
 #ifndef CONSTRAINTS_H
