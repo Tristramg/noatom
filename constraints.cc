@@ -16,9 +16,8 @@ Constraints::Constraints(const Options &)
 {
     Instance & data = *Instance::get();
 
-    ha = IntVarArray(*this, data.powerplant2 * data.campaigns, 0, data.weeks);
+    ha = IntVarArray(*this, data.powerplant2 * data.campaigns, -1, data.weeks);
     has_outage = BoolVarArray(*this, data.powerplant2 * data.campaigns, 0, 1);
-    out = BoolVarArray(*this, data.powerplant2 * data.weeks, 0, 1);
     IntVarArray has_outage_int(*this, data.powerplant2 * data.campaigns, 0, 1);
 
     for(int i=0; i < data.powerplant2 * data.campaigns; i++)
@@ -39,14 +38,10 @@ Constraints::Constraints(const Options &)
         for(int k=0; k < data.campaigns; k++)
         {
             endsm(i,k) = post(*this, ham(i,k) + data.plants2[i].durations[k]);
+            optm(i,k) = post(*this, ~(ham(i,k) >= 0));
+            //post(*this, imp(optm(i,k), ham(i,k) >= 0));
+            //post(*this, imp(ham(i,k) >= 0, optm(i,k)));
         }
-
-    for(int i=0; i < data.powerplant2; i++)
-        for(int k = 0; k < data.campaigns; k++)
-            for(int h = 0; h < data.weeks; h++)
-            {
-                out[i*data.weeks + h] = post(*this, ~(ham(i,k) >= h) && ~(endsm(i,k) <= h)) ;
-            }
 
 
     //CT13 a) Earliest and latest outage
@@ -69,6 +64,7 @@ Constraints::Constraints(const Options &)
 
     std::cout << "Ct 13b set" << std::endl;
 
+    
     //CT14 min spacing/max overlap between outages
     BOOST_FOREACH(Constraint_14 ct14, data.ct14)
     {
@@ -79,16 +75,23 @@ Constraints::Constraints(const Options &)
             BoolVarArgs optional(ct14.set.size());
             for(size_t Am = 0; Am < ct14.set.size(); Am++)
             {
-                BOOST_ASSERT(ct14.set[Am] < data.powerplant2);
-                start[Am] = ham(ct14.set[Am], k);
+                int i = ct14.set[Am];
+                BOOST_ASSERT(i < data.powerplant2);
+                start[Am] = ham(i, k);
 
                 //NOTE : unary exige que la durées soit > 0
                 //Je pense qu'on risque pas grand chose là.
-                if(data.plants2[Am].durations[k] + ct14.spacing > 0)
-                    duration[Am] = data.plants2[Am].durations[k] + ct14.spacing;
+                if(data.plants2[i].durations[k] + ct14.spacing > 0)
+                {
+                    duration[Am] = data.plants2[i].durations[k] + ct14.spacing;
+                    optional[Am] = optm(i, k);
+                }
                 else 
+                {
                     duration[Am] = 1;
-                optional[Am] = optm(ct14.set[Am], k);
+                    optional[Am] = BoolVar(*this, 0, 0);
+                }
+                status();
             }
             unary(*this, start, duration, optional);
         }
@@ -96,7 +99,6 @@ Constraints::Constraints(const Options &)
 
     std::cout << "Ct 14 set" << std::endl;
 
-    
     //CT 15
     BOOST_FOREACH(Constraint_15 ct15, data.ct15)
     {
@@ -111,7 +113,7 @@ Constraints::Constraints(const Options &)
                 int i = ct15.set[Am];
                 in_period[Am] = post(*this, ham(i,k) >= ct15.first_week && endsm(i,k) <= ct15.last_week && optm(i,k));
                 start[Am] = ham(i, k);
-                duration[Am] = data.plants2[Am].durations[k] + ct15.spacing;
+                duration[Am] = data.plants2[i].durations[k] + ct15.spacing;
             }
             unary(*this, start, duration, in_period);
         }
@@ -172,10 +174,11 @@ Constraints::Constraints(const Options &)
             BoolVarArgs optional(ct18.set.size());
             for(size_t Am = 0; Am < ct18.set.size(); Am++)
             {
-                BOOST_ASSERT(ct18.set[Am] < data.powerplant2);
-                start[Am] = ham(ct18.set[Am], k);
-                duration[Am] = data.plants2[Am].durations[k] + ct18.spacing;
-                optional[Am] = optm(ct18.set[Am], k);
+                int i = ct18.set[Am];
+                BOOST_ASSERT(i < data.powerplant2);
+                start[Am] = ham(i, k);
+                duration[Am] = data.plants2[i].durations[k] + ct18.spacing;
+                optional[Am] = optm(i, k);
             }
             unary(*this, start, duration, optional);
         }
@@ -273,13 +276,24 @@ Constraints::Constraints(const Options &)
 
 }
 
+bool Constraints::is_out(int i, int h) const
+{
+    Instance & data = *Instance::get();
+    for(int k = 0; k < data.campaigns; k++)
+    {
+        if( ha[i + k * powerplant2].val() >= h && ha[i+k * powerplant2].val())
+            return true;
+    }
+    return false;
+
+}
+
 /// Constructor for cloning \a s
 Constraints::Constraints(bool share, Constraints & s) :
     Space(share,s), powerplant2(s.powerplant2), campaigns(s.campaigns)
 {
     ha.update(*this, share, s.ha);
     has_outage.update(*this, share, s.has_outage);
-    out.update(*this, share, s.out);
 }
 
 Space* Constraints::copy(bool share)
@@ -294,10 +308,11 @@ void Constraints::print(std::ostream& os) const
         os << "Plant n°" << i << std::endl;
         for(int k = 0; k < campaigns; k++)
         {
+            os << "  " << ha[i + k * powerplant2];
             if(has_outage[i + k * powerplant2].assigned() && has_outage[i + k * powerplant2].val() == 0)
-                os << "  -1";
-            else   
-                os << "  " << ha[i + k * powerplant2];
+                os << "X";
+            else
+                os << " ";
         }
         os << std::endl;
 

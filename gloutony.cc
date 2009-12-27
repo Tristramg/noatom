@@ -42,6 +42,9 @@ int main(int argc, char * argv[])
     
     Instance::build(sets[opt.model()]);
 
+    Constraints c(opt);
+    c.status();
+    c.print(std::cout);
     Script::run<Constraints, DFS, Options>(opt);
     //while (Constraints * s = e.next()) {
     //    s->print(std::cout); delete s;

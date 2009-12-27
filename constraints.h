@@ -14,12 +14,12 @@ class Constraints : public Gecode::Space
     int campaigns;
     IntVarArray ha;
     BoolVarArray has_outage;
-    BoolVarArray out;
     public:
         Constraints (const Options &);
         Constraints(bool share, Constraints & s);
         virtual Gecode::Space* copy(bool share);
         virtual void print(std::ostream& os) const;
+        bool is_out(int plant, int week) const;
  
 };
 #endif
