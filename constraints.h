@@ -10,12 +10,11 @@ using namespace Gecode;
 
 class Constraints : public Gecode::Space 
 {
-    Instance data;
     int powerplant2;
     int campaigns;
     IntVarArray ha;
     BoolVarArray has_outage;
-    IntVarArray has_outage_int;
+    BoolVarArray out;
     public:
         Constraints (const Options &);
         Constraints(bool share, Constraints & s);

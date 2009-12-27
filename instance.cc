@@ -12,8 +12,36 @@ typedef file_iterator<char>   iterator_t;
 typedef scanner<iterator_t>     scanner_t;
 typedef rule<scanner_t>         rule_t;
 
+Instance * Instance::data = 0;
 
-Instance::Instance(char * filename)
+void Instance::build(const std::string & filename)
+{
+    if(Instance::data == 0)
+        Instance::data = new Instance(filename);
+    else
+        throw "Instance already exists!";
+}
+
+Instance * Instance::get()
+{
+    if(data !=0)
+        return Instance::data;
+    else
+        throw "Instance not built yet";
+}
+
+void Instance::destroy()
+{
+    if(Instance::data != 0)
+    {
+        delete Instance::data;
+        Instance::data = 0;
+    }
+    else
+        throw "No instance to destroy";
+}
+
+Instance::Instance(const std::string & filename)
 {
     file_iterator<> first(filename);
     if(!first)
@@ -301,5 +329,10 @@ Instance::Instance(char * filename)
         BOOST_ASSERT(info.hit);
     }
     std::cout << "Ok" << std::endl;
+    std::cout << "Plants type1: " << powerplant1
+        << ", plants type2: " << powerplant2
+        << ", timesteps: " << timesteps
+        << ", scenarios: " << scenario << std::endl;
+
 }
 

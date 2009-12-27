@@ -11,18 +11,21 @@
 
 using namespace Gecode;
 
-std::string sets[] = {"../data0.txt", "../data1.txt", "../data2.txt", "../data3.txt", "../data4.txt", "../data5.txt"};
 
-Constraints::Constraints(const Options & opt):
-    data(sets[opt.model()]),
-    ha(*this, data.powerplant2 * data.campaigns, 0, data.weeks),
-    has_outage(*this, data.powerplant2 * data.campaigns, 0, 1),
-    has_outage_int(*this, data.powerplant2 * data.campaigns, 0, 1)
+Constraints::Constraints(const Options &)
 {
+    Instance & data = *Instance::get();
+
+    ha = IntVarArray(*this, data.powerplant2 * data.campaigns, 0, data.weeks);
+    has_outage = BoolVarArray(*this, data.powerplant2 * data.campaigns, 0, 1);
+    out = BoolVarArray(*this, data.powerplant2 * data.weeks, 0, 1);
+    IntVarArray has_outage_int(*this, data.powerplant2 * data.campaigns, 0, 1);
+
     for(int i=0; i < data.powerplant2 * data.campaigns; i++)
     {
         channel(*this, has_outage[i], has_outage_int[i]);
     }
+
     powerplant2 = data.powerplant2;
     campaigns = data.campaigns;
     Matrix<IntVarArray> ham(ha, data.powerplant2, data.campaigns);
@@ -37,6 +40,13 @@ Constraints::Constraints(const Options & opt):
         {
             endsm(i,k) = post(*this, ham(i,k) + data.plants2[i].durations[k]);
         }
+
+    for(int i=0; i < data.powerplant2; i++)
+        for(int k = 0; k < data.campaigns; k++)
+            for(int h = 0; h < data.weeks; h++)
+            {
+                out[i*data.weeks + h] = post(*this, ~(ham(i,k) >= h) && ~(endsm(i,k) <= h)) ;
+            }
 
 
     //CT13 a) Earliest and latest outage
@@ -269,7 +279,7 @@ Constraints::Constraints(bool share, Constraints & s) :
 {
     ha.update(*this, share, s.ha);
     has_outage.update(*this, share, s.has_outage);
-    has_outage_int.update(*this, share, s.has_outage_int);
+    out.update(*this, share, s.out);
 }
 
 Space* Constraints::copy(bool share)

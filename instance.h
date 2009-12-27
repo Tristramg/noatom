@@ -124,7 +124,12 @@ struct Constraint_21
 
 struct Instance
 {
-    Instance(char * filename);
+    static Instance * data;
+
+    static Instance * get();
+    static void build(const std::string &);
+    static void destroy();
+    
 
     size_t timesteps;
     int weeks;
@@ -157,6 +162,8 @@ struct Instance
     std::vector<Constraint_19> ct19;
     std::vector<Constraint_20> ct20;
     std::vector<Constraint_21> ct21;
+    private:
+    Instance(const std::string & filename);
 };
 
 #endif
