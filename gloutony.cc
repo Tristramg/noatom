@@ -363,21 +363,26 @@ int main(int argc, char * argv[])
         //    Script::run<Constraints, DFS, Options>(opt);
         try{
             std::cout << "Trying to get new solution" << std::endl;
-            while (Constraints * s = e.next())
+            while (!stop)
             {
-                Solution sol(*s, data);
-                if(sol.cost < best_cost)
+                Constraints * s = e.next();
+                if(s)
                 {
-                    if(best != 0)
-                        delete best;
-                    best = s;
-                    best_cost = sol.cost;
-                    sol.write(outfile, *best, start);
+                    Solution sol(*s, data);
+                    if(sol.cost < best_cost)
+                    {
+                        if(best != 0)
+                            delete best;
+                        best = s;
+                        best_cost = sol.cost;
+                        sol.write(outfile, *best, start);
+                    }
+                    else
+                        delete s;
+                    if( (second_clock::local_time() - start).total_seconds() > max_time - 60)
+                        stop = true; 
                 }
-                else
-                    delete s;
-                if( (second_clock::local_time() - start).total_seconds() > max_time - 60)
-                    stop = true; 
+                else stop = true;
             }
             stop = true;
         }
@@ -398,7 +403,7 @@ int main(int argc, char * argv[])
             }
         }
         if( (second_clock::local_time() - start).total_seconds() > max_time - 60)
-           stop = true; 
+            stop = true; 
     }
 
     Solution sol(*best, data);
