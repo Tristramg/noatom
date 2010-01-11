@@ -281,7 +281,7 @@ bool Constraints::is_out(int i, int h) const
     Instance & data = *Instance::get();
     for(int k = 0; k < data.campaigns; k++)
     {
-        if( ha[i + k * powerplant2].val() >= h && ha[i+k * powerplant2].val())
+        if( ha[i + k * powerplant2].val() <= h && ha[i+k * powerplant2].val() + data.plants2[i].durations[k] >= h)
             return true;
     }
     return false;
@@ -319,4 +319,29 @@ void Constraints::print(std::ostream& os) const
     }
 }
 
+int Constraints::get_campaign(int i, size_t t) const
+{
+    Instance & data = *Instance::get();
+    int steps_per_week = data.timesteps / data.weeks;
+    int h = t / steps_per_week;
+    if(ha[0].val() < h)
+        return - 1;
+    for (int k = 0; k < campaigns; k++)
+    {
+        if(ha[i + k*powerplant2].val() >= h)
+           return k; 
+    }
+}
 
+bool Constraints::first_outage(int i, size_t t) const
+{
+    Instance & data = *Instance::get();
+    int steps_per_week = data.timesteps / data.weeks;
+
+    for (int k = 0; k < data.campaigns; k++)
+    {
+        if(ha[i + k*powerplant2].val() * steps_per_week == t)
+            return true;
+    }
+    return false;
+}

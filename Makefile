@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-W -Wall -ansi -pedantic -O3 -Wno-deprecated 
+CXXFLAGS=-W -Wall -ansi -pedantic -g -Wno-deprecated 
 LDFLAGS=-lgecodeint -lgecodesearch -lgecodekernel -lgecodesupport -lgecodescheduling -lgecodegist -lgecodedriver
 EXEC=noatom
 

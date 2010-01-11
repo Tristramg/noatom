@@ -43,6 +43,7 @@ void Instance::destroy()
 
 Instance::Instance(const std::string & filename)
 {
+    dataset = filename;
     file_iterator<> first(filename);
     if(!first)
     {

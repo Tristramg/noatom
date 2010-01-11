@@ -43,8 +43,8 @@ struct Powerplant_t2
     int current_stock_threshold;
     std::vector<int> stock_threshold;
     std::vector<float> pmax;
-    std::vector<int> max_stock_before_refueling;
-    std::vector<int> max_stock_after_refueling;
+    std::vector<float> max_stock_before_refueling;
+    std::vector<float> max_stock_after_refueling;
     std::vector<float> refueling_cost;
     float fuel_price;
     std::vector<int> current_decrease_profile_idx;
@@ -132,6 +132,7 @@ struct Instance
     
 
     size_t timesteps;
+    std::string dataset;
     int weeks;
     int campaigns;
     int scenario;
@@ -148,7 +149,7 @@ struct Instance
     int constraint20;
     int constraint21;
     std::vector<int> durations;
-    std::vector<std::vector<double> > demand;
+    std::vector<std::vector<float> > demand;
 
     std::vector<Powerplant_t1> plants1;
     std::vector<Powerplant_t2> plants2;
