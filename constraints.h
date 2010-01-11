@@ -1,7 +1,6 @@
 #include "instance.h"
 
 #include "gecode/int.hh"
-#include <gecode/driver.hh>
 
 #ifndef CONSTRAINTS_H
 #define CONSTRAINTS_H
@@ -15,7 +14,7 @@ class Constraints : public Gecode::Space
     BoolVarArray has_outage;
     public:
     IntVarArray ha;
-        Constraints (const Options &);
+        Constraints ();
         Constraints(bool share, Constraints & s);
         virtual Gecode::Space* copy(bool share);
         virtual void print(std::ostream& os) const;

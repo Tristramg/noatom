@@ -2,7 +2,7 @@
 #include <gecode/driver.hh>
 #include <gecode/minimodel.hh>
 #include <fstream>
-
+#include <boost/program_options.hpp>
 
 struct infeasible{
     enum what {OUTAGE_LATER};
@@ -26,7 +26,7 @@ struct infeasible{
 
 using namespace Gecode;
 using namespace boost::posix_time;
-
+namespace po = boost::program_options;
 
 float pb(int i, int k, float x)
 {
@@ -231,7 +231,7 @@ void Solution::write(const std::string & filename, const Constraints & c, ptime 
     time_duration duration = t - start;
 
     of << "begin main\n"
-        << "team_identifier noatom\n"
+        << "team_identifier J10\n"
         << "solution_time_date " << t << "\n"
         << "solution_running_time " << duration << "\n"
         << "data_set " << data.dataset << "\n"
@@ -303,21 +303,48 @@ void Solution::write(const std::string & filename, const Constraints & c, ptime 
 int main(int argc, char * argv[])
 {
     ptime start(second_clock::local_time());
-    Options opt("NoAtom!");
-    opt.model(0, "0", "data0.txt");
-    opt.model(1, "1", "data1.txt");
-    opt.model(2, "2", "data2.txt");
-    opt.model(3, "3", "data3.txt");
-    opt.model(4, "4", "data4.txt");
-    opt.model(5, "5", "data5.txt");
-    opt.model(0); //default value
-    opt.parse(argc, argv);
-    std::string sets[] = {"../data0.txt", "../data1.txt", "../data2.txt", "../data3.txt", "../data4.txt", "../data5.txt"};
 
-    Instance::build(sets[opt.model()]);
+    po::options_description desc("Allowed options");
+    std::string infile, outfile;
+    int max_time;
+
+    desc.add_options()
+        ("help,h", "Display this help message")
+        ("time,t", po::value<int>(&max_time)->default_value(1800), "Maximum execution time in seconds")
+        ("instance,n", po::value<std::string>(&infile), "Instance data file")
+        ("team,i", "Show the team identifier")
+        ("result,r", po::value<std::string>(&outfile), "Output file containing the solution");
+
+    po::options_description cmdline_options;
+    cmdline_options.add(desc);
+
+    po::variables_map vm;
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::notify(vm);
+
+    if(argc == 1 || vm.count("help"))
+    {
+        std::cout << desc << std::endl;
+        return (EXIT_SUCCESS);
+    }
+
+    if(vm.count("team"))
+    {
+        std::cout << "J10" << std::endl;
+        return (EXIT_SUCCESS);
+    }
+
+    if(!vm.count("result") && !vm.count("instance"))
+    {
+        std::cout << desc << std::endl;
+        return (EXIT_SUCCESS);
+
+    }
+
+    Instance::build(infile);
     Instance & data = *Instance::get();
 
-    Constraints c(opt);
+    Constraints c;
     c.status();
     c.print(std::cout);
     bool stop = false;
@@ -333,7 +360,7 @@ int main(int argc, char * argv[])
             {
                 Solution sol(*s, data);
                 s->print(std::cout);
-                sol.write("test", *s, start);
+                sol.write(outfile, *s, start);
                 delete s;
             }
             stop = true;

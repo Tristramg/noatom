@@ -12,7 +12,7 @@
 using namespace Gecode;
 
 
-Constraints::Constraints(const Options &)
+Constraints::Constraints()
 {
     Instance & data = *Instance::get();
 
