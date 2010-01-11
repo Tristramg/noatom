@@ -3,7 +3,7 @@
 #include <gecode/minimodel.hh>
 #include <fstream>
 #include <boost/program_options.hpp>
-
+#include <limits>
 struct infeasible{
     enum what {OUTAGE_LATER};
     what w;
@@ -86,6 +86,7 @@ float get_pmax(int i, int t, int k, float x)
     return -1;
 }
 
+Solution::Solution() {}
 Solution::Solution(const Constraints & c, const Instance & data):
         p1(boost::extents[data.powerplant1][data.timesteps][data.scenario]),
         p2(boost::extents[data.powerplant2][data.timesteps][data.scenario]),
@@ -94,6 +95,7 @@ Solution::Solution(const Constraints & c, const Instance & data):
 {
     float fuel_cost = 0;
     float p1_cost = 0;
+    float remaining_fuel = 0; 
     int steps_per_week = data.timesteps / data.weeks;
 
     int low_demand = 0;
@@ -103,7 +105,10 @@ Solution::Solution(const Constraints & c, const Instance & data):
     {
         //CT8
         for(int i = 0; i < data.powerplant2; i++)
+        {
             x[i][0][s] = data.plants2[i].stock;
+            remaining_fuel -= x[i][data.timesteps][s] * data.plants2[i].fuel_price;
+        }
 
         for(size_t t = 0; t < data.timesteps; t++)
         {
@@ -215,6 +220,8 @@ Solution::Solution(const Constraints & c, const Instance & data):
 
     std::cout << "Refuel_cost: " << fuel_cost << std::endl;
     std::cout << "P1 cost: " << p1_cost/data.scenario << std::endl;
+    cost = fuel_cost + (p1_cost - remaining_fuel) / data.scenario;
+    std::cout << "Total cost: " << cost << std::endl;
 }
 
 void Solution::write(const std::string & filename, const Constraints & c, ptime start) const
@@ -348,20 +355,29 @@ int main(int argc, char * argv[])
     c.status();
     c.print(std::cout);
     bool stop = false;
+    Constraints * best = 0;
+    float best_cost = std::numeric_limits<float>::max();
     while(!stop)
     {
         DFS<Constraints> e(&c);
         //    Script::run<Constraints, DFS, Options>(opt);
         try{
             std::cout << "Trying to get new solution" << std::endl;
-            //TODO: virer cette afreuse fuite de mémoire
-
-            if (Constraints * s = e.next())
+            while (Constraints * s = e.next())
             {
                 Solution sol(*s, data);
-                s->print(std::cout);
-                sol.write(outfile, *s, start);
-                delete s;
+                if(sol.cost < best_cost)
+                {
+                    if(best != 0)
+                        delete best;
+                    best = s;
+                    best_cost = sol.cost;
+                    sol.write(outfile, *best, start);
+                }
+                else
+                    delete s;
+                if( (second_clock::local_time() - start).total_seconds() > max_time - 60)
+                    stop = true; 
             }
             stop = true;
         }
@@ -381,7 +397,12 @@ int main(int argc, char * argv[])
                 }
             }
         }
+        if( (second_clock::local_time() - start).total_seconds() > max_time - 60)
+           stop = true; 
     }
 
+    Solution sol(*best, data);
+    sol.write(outfile, *best, start);
+    delete best;
     Instance::destroy();
 }
