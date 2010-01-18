@@ -10,9 +10,9 @@ struct Powerplant_t1
 {
     std::string name;
     int index;
-    std::vector<std::vector<float> > pmin;
-    std::vector<std::vector<float> > pmax;
-    std::vector<std::vector<float> > cost;
+    std::vector<std::vector<double> > pmin;
+    std::vector<std::vector<double> > pmax;
+    std::vector<std::vector<double> > cost;
 
     Powerplant_t1(size_t scenarios, size_t timesteps) :
         pmin(scenarios),
@@ -32,7 +32,7 @@ struct Powerplant_t2
 {
     std::string name;
     int index;
-    float stock;
+    double stock;
     int campaigns;
     std::vector<int> durations;
     int current_max_modulus;
@@ -42,15 +42,15 @@ struct Powerplant_t2
     std::vector<int> refuel_ratio;
     int current_stock_threshold;
     std::vector<int> stock_threshold;
-    std::vector<float> pmax;
-    std::vector<float> max_stock_before_refueling;
-    std::vector<float> max_stock_after_refueling;
-    std::vector<float> refueling_cost;
-    float fuel_price;
+    std::vector<double> pmax;
+    std::vector<double> max_stock_before_refueling;
+    std::vector<double> max_stock_after_refueling;
+    std::vector<double> refueling_cost;
+    double fuel_price;
     std::vector<int> current_decrease_profile_idx;
-    std::vector<float> current_decrease_profile_val;
+    std::vector<double> current_decrease_profile_val;
     std::vector<std::vector<int> > decrease_profile_idx;
-    std::vector<std::vector<float> > decrease_profile_val;
+    std::vector<std::vector<double> > decrease_profile_val;
 };
 
 struct Constraint_13
@@ -119,7 +119,7 @@ struct Constraint_21
     std::vector<int> set;
     int start;
     int end;
-    float max;
+    double max;
 };
 
 struct Instance
@@ -136,7 +136,7 @@ struct Instance
     int weeks;
     int campaigns;
     int scenario;
-    float epsilon;
+    double epsilon;
     int powerplant1;
     int powerplant2;
     int constraint13;
@@ -149,7 +149,7 @@ struct Instance
     int constraint20;
     int constraint21;
     std::vector<int> durations;
-    std::vector<std::vector<float> > demand;
+    std::vector<std::vector<double> > demand;
 
     std::vector<Powerplant_t1> plants1;
     std::vector<Powerplant_t2> plants2;

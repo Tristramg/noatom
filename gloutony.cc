@@ -4,6 +4,7 @@
 #include <fstream>
 #include <boost/program_options.hpp>
 #include <limits>
+#include <iomanip>
 struct infeasible{
     enum what {OUTAGE_LATER};
     what w;
@@ -28,14 +29,14 @@ using namespace Gecode;
 using namespace boost::posix_time;
 namespace po = boost::program_options;
 
-float pb(int i, int k, float x)
+double pb(int i, int k, double x)
 {
-    float x1, x2;
-    float y1, y2;
+    double x1, x2;
+    double y1, y2;
     Instance & data = *Instance::get();
 
     std::vector<int> c;
-    std::vector<float> f;
+    std::vector<double> f;
     if(k < 0)
     {
         c = data.plants2[i].current_decrease_profile_idx;
@@ -57,8 +58,8 @@ float pb(int i, int k, float x)
             BOOST_ASSERT(x1 != x2);
             //Pff... 15 min pour retrouver cette fonction affine
             //Niveau 3e...
-            float a = (y1 - y2) / (x1 - x2);
-            float b = y1 - a * x1;
+            double a = (y1 - y2) / (x1 - x2);
+            double b = y1 - a * x1;
             return a * x + b;
         }
     }
@@ -66,11 +67,11 @@ float pb(int i, int k, float x)
     return -1;
 }
 
-float get_pmax(int i, int t, int k, float x)
+double get_pmax(int i, int t, int k, double x)
 {
     Instance & data = *Instance::get();
 
-    int BO;
+    double BO;
     if(k < 0)
         BO = data.plants2[i].current_stock_threshold;
     else
@@ -78,7 +79,7 @@ float get_pmax(int i, int t, int k, float x)
 
     if(x < BO)
     {
-        float ratio = pb(i, k, x);
+        double ratio = pb(i, k, x);
         BOOST_ASSERT(ratio >= 0 && ratio <= 1);
         return data.plants2[i].pmax[t] * ratio;
     }
@@ -95,9 +96,9 @@ Solution::Solution(const Constraints & c, const Instance & data):
         x(boost::extents[data.powerplant2][data.timesteps + 1][data.scenario]),
     r(boost::extents[data.powerplant2][data.campaigns])
 {
-    float fuel_cost = 0;
-    float p1_cost = 0;
-    float remaining_fuel = 0; 
+    double fuel_cost = 0;
+    double p1_cost = 0;
+    double remaining_fuel = 0; 
     int steps_per_week = data.timesteps / data.weeks;
 
     int low_demand = 0;
@@ -114,45 +115,55 @@ Solution::Solution(const Constraints & c, const Instance & data):
 
         for(size_t t = 0; t < data.timesteps; t++)
         {
-            float ratio = 1.0;
-            float p1min = 0;
+            double ratio = 1.0;
+            double p1min = 0;
             for(int j = 0; j < data.powerplant1; j++)
+            {
                 p1min += data.plants1[j].pmin[s][t];
-            float demand = data.demand[s][t];
+            }
+            double demand = data.demand[s][t];
 
-            float p2mod = 0;
-            float p2dec = 0;
+            double p2mod = 0;
+            double p2dec = 0;
+            double produced = 0;
             for(int i = 0; i < data.powerplant2; i++)
             {
                 int k = c.get_campaign(i,t);
-                float pmax = get_pmax(i, t, k, x[i][t][s]);
+                double pmax;
+                if( !c.is_out(i, t / steps_per_week) )
+                    pmax = get_pmax(i, t, k, x[i][t][s]);
+                else
+                    pmax = 0;
                 if(pmax < data.plants2[i].pmax[t])
                     p2dec += pmax;
                 else
                     p2mod += pmax;
             }
-            for(int i = 0; i < data.powerplant2; i++)
-                if (demand - p1min - p2dec < p2mod)
-                {
-                    low_demand++;
-                    ratio = (demand - p1min - p2dec) / p2mod;
-                }
+
+            if (demand - p1min - p2dec < p2mod)
+            {
+                low_demand++;
+                ratio = (demand - p1min - p2dec) / p2mod;
+            }
 
             for(int i = 0; i < data.powerplant2; i++)
             {
                 int k = c.get_campaign(i,t);
                 if( !c.is_out(i, t / steps_per_week) )
                 { 
-                    float pmax = get_pmax(i, t, k, x[i][t][s]);
+                    double pmax = get_pmax(i, t, k, x[i][t][s]);
                     if(pmax < data.plants2[i].pmax[t])
                         p2[i][t][s] = pmax;
                     else
                         p2[i][t][s] = pmax * ratio;
 
                     if(x[i][t][s] < p2[i][t][s] * data.durations[t])
+                    {
                         p2[i][t][s] = 0;
+                    }
 
                     x[i][t+1][s] = x[i][t][s] - p2[i][t][s] * data.durations[t]; // CT9
+                    produced += p2[i][t][s];
                     BOOST_ASSERT(x[i][t+1][s] >= 0);
                 }
                 else 
@@ -162,8 +173,8 @@ Solution::Solution(const Constraints & c, const Instance & data):
                     {
                         {
                             //CT10
-                            float max = data.plants2[i].max_stock_after_refueling[k];
-                            float ref = max;
+                            double max = data.plants2[i].max_stock_after_refueling[k];
+                            double ref = max;
                             int BOk = data.plants2[i].stock_threshold[k];
                             int BO1;
                             if(k < 1)
@@ -173,7 +184,7 @@ Solution::Solution(const Constraints & c, const Instance & data):
 
                             max -= BOk;
                             max -= ((data.plants2[i].refuel_ratio[k] -1) / data.plants2[i].refuel_ratio[k]) * (x[i][t][s] - BO1);
-                            float gap = max - (double)data.plants2[i].min_refuel[k];
+                            double gap = max - (double)data.plants2[i].min_refuel[k];
                             max -= gap;
                             r[i][k] = max;
                             r[i][k] = data.plants2[i].min_refuel[k];
@@ -215,10 +226,11 @@ Solution::Solution(const Constraints & c, const Instance & data):
 
             //TODO partir de la centrale qui coûte le plus cher
             // Après tout, c'est ça qui coute le plus cher !
-            float to_produce = demand - (p2mod * ratio) - p1min - p2dec;
+//            double to_produce = demand - (p2mod * ratio) - p1min - p2dec;
+            double to_produce = demand - produced - p1min;
             for(int j = 0; j < data.powerplant1; j++)
             {
-                float prod = std::min(to_produce, data.plants1[j].pmax[s][t] - data.plants1[j].pmin[s][t]);
+                double prod = std::min(to_produce, data.plants1[j].pmax[s][t] - data.plants1[j].pmin[s][t]);
                 to_produce -= prod;
                 p1[j][t][s] = data.plants1[j].pmin[s][t] + prod;
                 p1_cost += data.plants1[j].cost[s][t] * p1[j][t][s] * data.durations[t];
@@ -247,7 +259,7 @@ void Solution::write(const std::string & filename, const Constraints & c, ptime 
     ptime t(second_clock::local_time());
 
     time_duration duration = t - start;
-
+    of << std::setprecision(9);
     of << "begin main\n"
         << "team_identifier J10\n"
         << "solution_time_date " << t << "\n"
@@ -366,7 +378,7 @@ int main(int argc, char * argv[])
     bool stop = false;
     Constraints * s;
     Constraints * best = 0;
-    float best_cost = std::numeric_limits<float>::max();
+    double best_cost = std::numeric_limits<double>::max();
     while(!stop)
     {
         DFS<Constraints> e(&c);

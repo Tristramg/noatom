@@ -324,8 +324,10 @@ int Constraints::get_campaign(int i, size_t t) const
     Instance & data = *Instance::get();
     int steps_per_week = data.timesteps / data.weeks;
     int h = t / steps_per_week;
-    if(ha[0].val() < h)
+    if(ha[0].val() + data.plants2[i].durations[0] >= h)
+    {
         return - 1;
+    }
     for (int k = 0; k < campaigns; k++)
     {
         if(ha[i + k*powerplant2].val() >= h)
