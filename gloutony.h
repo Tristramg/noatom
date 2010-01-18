@@ -9,8 +9,8 @@
 struct Solution
 {
     float cost;
-    boost::multi_array<float, 3> p1, p2, x;
-    boost::multi_array<float, 2> r;
+    boost::multi_array<double, 3> p1, p2, x;
+    boost::multi_array<double, 2> r;
  
     Solution();
     Solution(const Constraints & c, const Instance & data);

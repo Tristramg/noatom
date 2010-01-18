@@ -36,12 +36,12 @@ struct Powerplant_t2
     int campaigns;
     std::vector<int> durations;
     int current_max_modulus;
-    std::vector<int> max_modulus;
-    std::vector<int> max_refuel;
-    std::vector<int> min_refuel;
-    std::vector<int> refuel_ratio;
+    std::vector<double> max_modulus;
+    std::vector<double> max_refuel;
+    std::vector<double> min_refuel;
+    std::vector<double> refuel_ratio;
     int current_stock_threshold;
-    std::vector<int> stock_threshold;
+    std::vector<double> stock_threshold;
     std::vector<double> pmax;
     std::vector<double> max_stock_before_refueling;
     std::vector<double> max_stock_after_refueling;

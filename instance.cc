@@ -138,12 +138,12 @@ Instance::Instance(const std::string & filename)
             >> "campaigns " >> int_p[assign_a(plants2[i].campaigns)] >> eol_p
             >> "durations" >> *(' '|int_p[push_back_a(plants2[i].durations)]) >> eol_p 
             >> "current_campaign_max_modulus " >> int_p[assign_a(plants2[i].current_max_modulus)] >> eol_p
-            >> "max_modulus" >> *(' '|int_p[push_back_a(plants2[i].max_modulus)]) >> eol_p
-            >> "max_refuel" >> *(' '|int_p[push_back_a(plants2[i].max_refuel)]) >> eol_p
-            >> "min_refuel" >> *(' '|int_p[push_back_a(plants2[i].min_refuel)]) >> eol_p
-            >> "refuel_ratio" >> *(' '|int_p[push_back_a(plants2[i].refuel_ratio)]) >> eol_p
-            >> "current_campaign_stock_threshold " >> int_p[assign_a(plants2[i].current_stock_threshold)] >> eol_p
-            >> "stock_threshold" >> *(' '|int_p[push_back_a(plants2[i].stock_threshold)]) >> eol_p
+            >> "max_modulus" >> *(' '|real_p[push_back_a(plants2[i].max_modulus)]) >> eol_p
+            >> "max_refuel" >> *(' '|real_p[push_back_a(plants2[i].max_refuel)]) >> eol_p
+            >> "min_refuel" >> *(' '|real_p[push_back_a(plants2[i].min_refuel)]) >> eol_p
+            >> "refuel_ratio" >> *(' '|real_p[push_back_a(plants2[i].refuel_ratio)]) >> eol_p
+            >> "current_campaign_stock_threshold " >> real_p[assign_a(plants2[i].current_stock_threshold)] >> eol_p
+            >> "stock_threshold" >> *(' '|real_p[push_back_a(plants2[i].stock_threshold)]) >> eol_p
             >> "pmax" >> *(' '|real_p[push_back_a(plants2[i].pmax)]) >> eol_p
             >> "max_stock_before_refueling" >> *(' '|int_p[push_back_a(plants2[i].max_stock_before_refueling)]) >> eol_p
             >> "max_stock_after_refueling" >> *(' '|int_p[push_back_a(plants2[i].max_stock_after_refueling)]) >> eol_p

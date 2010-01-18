@@ -48,7 +48,7 @@ double pb(int i, int k, double x)
         f = data.plants2[i].decrease_profile_val[k];
     }
 
-    for(size_t z = 1; z < c.size(); z++)
+    for(size_t z = 0; z < c.size(); z++)
     {
         if( c[z] <= x )
         {
@@ -102,7 +102,7 @@ Solution::Solution(const Constraints & c, const Instance & data):
     int steps_per_week = data.timesteps / data.weeks;
 
     int low_demand = 0;
-
+    boost::multi_array<double, 2> mod(boost::extents[data.powerplant2][data.campaigns]);
 
     for(int s = 0; s < data.scenario; s++)
     {
@@ -156,12 +156,31 @@ Solution::Solution(const Constraints & c, const Instance & data):
                     if(pmax < data.plants2[i].pmax[t])
                         p2[i][t][s] = pmax;
                     else
-                        p2[i][t][s] = pmax * ratio;
-
-                    if(x[i][t][s] < p2[i][t][s] * data.durations[t])
                     {
-                        p2[i][t][s] = 0;
+                        p2[i][t][s] = pmax * ratio;
+                        if(k>=0)
+                        {
+                            mod[i][k] += (pmax - p2[i][t][s]) * data.durations[t];
+                            BOOST_ASSERT(mod[i][k] <= data.plants2[i].max_modulus[k]);
+                        }
                     }
+
+                    if(x[i][t][s] <= p2[i][t][s] * data.durations[t])
+                    {
+/*                        if(k >= 0 && x[i][t][s] <= data.plants2[i].stock_threshold[k])
+                        {
+                            std::cout << "x: " << x[i][t][s] << ", threshold:" << data.plants2[i].stock_threshold[k] << " i:" << i << " k:" << k << std::endl;
+                        }
+*/
+                        p2[i][t][s] = x[i][t][s] / (double)data.durations[t];
+                     /*   if(k>=0)
+                        {
+                            mod[i][k] += (pmax - p2[i][t][s]) * data.durations[t];
+                            BOOST_ASSERT(mod[i][k] <= data.plants2[i].max_modulus[k]);
+                        }*/
+                     }
+
+                        
 
                     x[i][t+1][s] = x[i][t][s] - p2[i][t][s] * data.durations[t]; // CT9
                     produced += p2[i][t][s];
@@ -172,12 +191,11 @@ Solution::Solution(const Constraints & c, const Instance & data):
                     p2[i][t][s] = 0;
                     if( k >= 0 && c.ha[i + k*data.powerplant2].val() * steps_per_week== t )
                     {
-                        std::cout << "in, i=" << i << " week=" << t/steps_per_week << " k=" << k << std::endl;
                         //CT10
                         double max = data.plants2[i].max_stock_after_refueling[k];
                         double ref = max;
-                        int BOk = data.plants2[i].stock_threshold[k];
-                        int BO1;
+                        double BOk = data.plants2[i].stock_threshold[k];
+                        double BO1;
                         if(k < 1)
                             BO1 = data.plants2[i].current_stock_threshold;
                         else
@@ -188,13 +206,13 @@ Solution::Solution(const Constraints & c, const Instance & data):
                         double gap = max - (double)data.plants2[i].min_refuel[k];
                         max -= gap;
                         r[i][k] = max;
-                        r[i][k] = data.plants2[i].min_refuel[k];
+ //                       r[i][k] = data.plants2[i].min_refuel[k];
                         BOOST_ASSERT(r[i][k] > 0);
                         fuel_cost += r[i][k] * data.plants2[i].refueling_cost[k];
 
 
                         x[i][t+1][s] = ref - gap;
-                        x[i][t+1][s] = BOk + ((data.plants2[i].refuel_ratio[k] -1) / data.plants2[i].refuel_ratio[k]) * (x[i][t][s] - BO1) + r[i][k];
+//                        x[i][t+1][s] = BOk + ((data.plants2[i].refuel_ratio[k] -1) / data.plants2[i].refuel_ratio[k]) * (x[i][t][s] - BO1) + r[i][k];
                         //CT7 
                         //CT11
                         //TODO se casser le cul à trouver un moyen de gérer ça
@@ -260,7 +278,7 @@ void Solution::write(const std::string & filename, const Constraints & c, ptime 
     ptime t(second_clock::local_time());
 
     time_duration duration = t - start;
-    of << std::setprecision(9);
+    of << std::setprecision(15);
     of << "begin main\n"
         << "team_identifier J10\n"
         << "solution_time_date " << t << "\n"
@@ -318,7 +336,7 @@ void Solution::write(const std::string & filename, const Constraints & c, ptime 
                 << "fuel_variation";
             for(size_t t=0; t < data.timesteps; t++)
             {
-                of << " " << (int)x[i][t][s];
+                of << " " << x[i][t][s];
             }
             of << "\n"
                 << "remaining_fuel_at_the_end " << x[i][data.timesteps][s] << "\n";
