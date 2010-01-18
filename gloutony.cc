@@ -47,12 +47,14 @@ float pb(int i, int k, float x)
         f = data.plants2[i].decrease_profile_val[k];
     }
 
-    for(size_t z = 0; z < c.size(); z++)
+    for(size_t z = 1; z < c.size(); z++)
     {
         if( c[z] <= x )
         {
             x1 = c[z]; x2 = c.at(z-1);
             y1 = f[z]; y2 = f.at(z-1);
+            BOOST_ASSERT(y1 <= 1 && y1 >= 0 && y2 <= 1 && y2 >= 0);
+            BOOST_ASSERT(x1 != x2);
             //Pff... 15 min pour retrouver cette fonction affine
             //Niveau 3e...
             float a = (y1 - y2) / (x1 - x2);
@@ -141,7 +143,6 @@ Solution::Solution(const Constraints & c, const Instance & data):
                 int k = c.get_campaign(i,t);
                 if( !c.is_out(i, t / steps_per_week) )
                 { 
-                    int k = c.get_campaign(i,t);
                     float pmax = get_pmax(i, t, k, x[i][t][s]);
                     if(pmax < data.plants2[i].pmax[t])
                         p2[i][t][s] = pmax;
@@ -157,13 +158,12 @@ Solution::Solution(const Constraints & c, const Instance & data):
                 else 
                 {
                     p2[i][t][s] = 0;
-                    if(c.first_outage(i, t))
+                    if( k >= 0 && c.ha[i + k*data.powerplant2].val() * steps_per_week== t )
                     {
-                        if(k >= 0)
                         {
                             //CT10
                             float max = data.plants2[i].max_stock_after_refueling[k];
-                            x[i][t+1][s] = max;
+                            float ref = max;
                             int BOk = data.plants2[i].stock_threshold[k];
                             int BO1;
                             if(k < 1)
@@ -173,10 +173,15 @@ Solution::Solution(const Constraints & c, const Instance & data):
 
                             max -= BOk;
                             max -= ((data.plants2[i].refuel_ratio[k] -1) / data.plants2[i].refuel_ratio[k]) * (x[i][t][s] - BO1);
+                            float gap = max - (double)data.plants2[i].min_refuel[k];
+                            max -= gap;
                             r[i][k] = max;
+                            r[i][k] = data.plants2[i].min_refuel[k];
                             fuel_cost += r[i][k] * data.plants2[i].refueling_cost[k];
 
 
+                            x[i][t+1][s] = ref - gap;
+                            x[i][t+1][s] = BOk + ((data.plants2[i].refuel_ratio[k] -1) / data.plants2[i].refuel_ratio[k]) * (x[i][t][s] - BO1) + r[i][k];
                             //CT7 
                             //CT11
                             //TODO se casser le cul à trouver un moyen de gérer ça
@@ -186,6 +191,12 @@ Solution::Solution(const Constraints & c, const Instance & data):
                             // Tentative de la technique 1
                             if(x[i][t][s] > data.plants2[i].max_stock_before_refueling[k] || r[i][k] < data.plants2[i].min_refuel[k])
                             {
+                                std::cout << "max_before: " << data.plants2[i].max_stock_before_refueling[k] << " min_ref:" <<  data.plants2[i].min_refuel[k] << " bo" << BOk << std::endl;
+                                std::cout << "x:" << x[i][t][s] << " r" << r[i][k] <<  " gap:" << gap << " x-1" << x[i][t-1][s] << std::endl;
+                                BOOST_ASSERT(x[i][t][s] <= x[i][t-1][s]);
+
+
+                                std::cout << std::endl;
                                 infeasible e;
                                 e.i = i;
                                 e.t = t;
@@ -256,7 +267,7 @@ void Solution::write(const std::string & filename, const Constraints & c, ptime 
                 of << " " << c.ha[i + k * data.powerplant2].val();
             }
             of << "\n"
-                << "reloaded fuel";
+                << "reloaded_fuel";
             for(int k=0; k < data.campaigns; k++)
             {
                 of << " " << (int)r[i][k];
@@ -269,7 +280,7 @@ void Solution::write(const std::string & filename, const Constraints & c, ptime 
         for(int s=0; s < data.scenario; s++)
         {
             of << "scenario " << s << "\n"
-                << "begin type_1_plants\n";
+                << "begin type1_plants\n";
             for(int j=0; j < data.powerplant1; j++)
             {
                 of << "name " << data.plants1[j].name << " " << data.plants1[j].index;
@@ -281,8 +292,8 @@ void Solution::write(const std::string & filename, const Constraints & c, ptime 
 
             }
 
-            of << "end type_1_plants\n"
-                << "begin type_2_plants\n";
+            of << "end type1_plants\n"
+                << "begin type2_plants\n";
             for(int i=0; i < data.powerplant2; i++)
             {
                 of << "name " << data.plants2[i].name << " " << data.plants2[i].index;
@@ -299,7 +310,7 @@ void Solution::write(const std::string & filename, const Constraints & c, ptime 
                 of << "\n"
                     << "remaining_fuel_at_the_end " << x[i][data.timesteps][s] << "\n";
             }
-            of << "end type_2_plants\n";
+            of << "end type2_plants\n";
         }
         of << "end power_output";
 
@@ -352,9 +363,8 @@ int main(int argc, char * argv[])
     Instance & data = *Instance::get();
 
     Constraints c;
-    c.status();
-    c.print(std::cout);
     bool stop = false;
+    Constraints * s;
     Constraints * best = 0;
     float best_cost = std::numeric_limits<float>::max();
     while(!stop)
@@ -365,7 +375,7 @@ int main(int argc, char * argv[])
             std::cout << "Trying to get new solution" << std::endl;
             while (!stop)
             {
-                Constraints * s = e.next();
+                s = e.next();
                 if(s)
                 {
                     Solution sol(*s, data);
@@ -392,13 +402,29 @@ int main(int argc, char * argv[])
             {
                 std::cout << "Setting outage start later of plant " << i.i << ", campaign " << i.k << std::endl;
                 int idx = i.i + i.k * data.powerplant2;
+                int idx2 = i.i + (i.k-1) * data.powerplant2;
+                std::cout << "  Prev: " << c.ha[idx2] << ", this: " << c.ha[idx] << std::endl;
                 if(c.ha[idx].min() == -1)
                 {
                     post(c, c.ha[idx] == -1);
                 }
-                else
+                else if(i.k>0 && c.ha[idx2].min() < c.ha[idx2].max())
+                {
+                    post(c, c.ha[idx2] < c.ha[idx2].max());
+                    c.status();
+                    std::cout << "New max" << c.ha[idx2].max() << std::endl;
+                }
+                else if(c.ha[idx].max() > c.ha[idx].min())
                 {
                     post(c, c.ha[idx] > c.ha[idx].min());
+                    c.status();
+                    std::cout << "New min" << c.ha[idx].min() << std::endl;
+                }
+                
+                else
+                {
+                    std::cout << "It's the end :'(" << std::endl;
+                    return (0);
                 }
             }
         }
