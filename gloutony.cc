@@ -151,6 +151,7 @@ Solution::Solution(const Constraints & c, const Instance & data):
                 int k = c.get_campaign(i,t);
                 if( !c.is_out(i, t / steps_per_week) )
                 { 
+                    BOOST_ASSERT(!(k >= 0 && c.ha[i + k*data.powerplant2].val() * steps_per_week== t)); 
                     double pmax = get_pmax(i, t, k, x[i][t][s]);
                     if(pmax < data.plants2[i].pmax[t])
                         p2[i][t][s] = pmax;
@@ -171,50 +172,50 @@ Solution::Solution(const Constraints & c, const Instance & data):
                     p2[i][t][s] = 0;
                     if( k >= 0 && c.ha[i + k*data.powerplant2].val() * steps_per_week== t )
                     {
+                        std::cout << "in, i=" << i << " week=" << t/steps_per_week << " k=" << k << std::endl;
+                        //CT10
+                        double max = data.plants2[i].max_stock_after_refueling[k];
+                        double ref = max;
+                        int BOk = data.plants2[i].stock_threshold[k];
+                        int BO1;
+                        if(k < 1)
+                            BO1 = data.plants2[i].current_stock_threshold;
+                        else
+                            BO1 = data.plants2[i].stock_threshold[k - 1];
+
+                        max -= BOk;
+                        max -= ((data.plants2[i].refuel_ratio[k] -1) / data.plants2[i].refuel_ratio[k]) * (x[i][t][s] - BO1);
+                        double gap = max - (double)data.plants2[i].min_refuel[k];
+                        max -= gap;
+                        r[i][k] = max;
+                        r[i][k] = data.plants2[i].min_refuel[k];
+                        BOOST_ASSERT(r[i][k] > 0);
+                        fuel_cost += r[i][k] * data.plants2[i].refueling_cost[k];
+
+
+                        x[i][t+1][s] = ref - gap;
+                        x[i][t+1][s] = BOk + ((data.plants2[i].refuel_ratio[k] -1) / data.plants2[i].refuel_ratio[k]) * (x[i][t][s] - BO1) + r[i][k];
+                        //CT7 
+                        //CT11
+                        //TODO se casser le cul à trouver un moyen de gérer ça
+                        // Possibilité 1 : retarder le outage
+                        // Possibilité 2 : se casser le cul à faire produire la centrale plus (boarf...)
+
+                        // Tentative de la technique 1
+                        if(x[i][t][s] > data.plants2[i].max_stock_before_refueling[k] || r[i][k] < data.plants2[i].min_refuel[k])
                         {
-                            //CT10
-                            double max = data.plants2[i].max_stock_after_refueling[k];
-                            double ref = max;
-                            int BOk = data.plants2[i].stock_threshold[k];
-                            int BO1;
-                            if(k < 1)
-                                BO1 = data.plants2[i].current_stock_threshold;
-                            else
-                                BO1 = data.plants2[i].stock_threshold[k - 1];
-
-                            max -= BOk;
-                            max -= ((data.plants2[i].refuel_ratio[k] -1) / data.plants2[i].refuel_ratio[k]) * (x[i][t][s] - BO1);
-                            double gap = max - (double)data.plants2[i].min_refuel[k];
-                            max -= gap;
-                            r[i][k] = max;
-                            r[i][k] = data.plants2[i].min_refuel[k];
-                            fuel_cost += r[i][k] * data.plants2[i].refueling_cost[k];
+                            std::cout << "max_before: " << data.plants2[i].max_stock_before_refueling[k] << " min_ref:" <<  data.plants2[i].min_refuel[k] << " bo" << BOk << std::endl;
+                            std::cout << "x:" << x[i][t][s] << " r" << r[i][k] <<  " gap:" << gap << " x-1" << x[i][t-1][s] << std::endl;
+                            BOOST_ASSERT(x[i][t][s] <= x[i][t-1][s]);
 
 
-                            x[i][t+1][s] = ref - gap;
-                            x[i][t+1][s] = BOk + ((data.plants2[i].refuel_ratio[k] -1) / data.plants2[i].refuel_ratio[k]) * (x[i][t][s] - BO1) + r[i][k];
-                            //CT7 
-                            //CT11
-                            //TODO se casser le cul à trouver un moyen de gérer ça
-                            // Possibilité 1 : retarder le outage
-                            // Possibilité 2 : se casser le cul à faire produire la centrale plus (boarf...)
-
-                            // Tentative de la technique 1
-                            if(x[i][t][s] > data.plants2[i].max_stock_before_refueling[k] || r[i][k] < data.plants2[i].min_refuel[k])
-                            {
-                                std::cout << "max_before: " << data.plants2[i].max_stock_before_refueling[k] << " min_ref:" <<  data.plants2[i].min_refuel[k] << " bo" << BOk << std::endl;
-                                std::cout << "x:" << x[i][t][s] << " r" << r[i][k] <<  " gap:" << gap << " x-1" << x[i][t-1][s] << std::endl;
-                                BOOST_ASSERT(x[i][t][s] <= x[i][t-1][s]);
-
-
-                                std::cout << std::endl;
-                                infeasible e;
-                                e.i = i;
-                                e.t = t;
-                                e.k = k;
-                                e.w = infeasible::OUTAGE_LATER;
-                                throw e;
-                            }
+                            std::cout << std::endl;
+                            infeasible e;
+                            e.i = i;
+                            e.t = t;
+                            e.k = k;
+                            e.w = infeasible::OUTAGE_LATER;
+                            throw e;
                         }
                     }
                     else
@@ -226,7 +227,7 @@ Solution::Solution(const Constraints & c, const Instance & data):
 
             //TODO partir de la centrale qui coûte le plus cher
             // Après tout, c'est ça qui coute le plus cher !
-//            double to_produce = demand - (p2mod * ratio) - p1min - p2dec;
+            //            double to_produce = demand - (p2mod * ratio) - p1min - p2dec;
             double to_produce = demand - produced - p1min;
             for(int j = 0; j < data.powerplant1; j++)
             {
@@ -269,65 +270,65 @@ void Solution::write(const std::string & filename, const Constraints & c, ptime 
         << "end main\n"
 
         << "begin outages\n";
-        for(int i=0; i < data.powerplant2; i++)
+    for(int i=0; i < data.powerplant2; i++)
+    {
+        of << "name " << data.plants2[i].name << "\n"
+            << "index " << data.plants2[i].index << "\n"
+            << "outage_dates";
+        for(int k=0; k < data.campaigns; k++)
         {
-            of << "name " << data.plants2[i].name << "\n"
-                << "index " << data.plants2[i].index << "\n"
-                << "outage_dates";
-            for(int k=0; k < data.campaigns; k++)
+            of << " " << c.ha[i + k * data.powerplant2].val();
+        }
+        of << "\n"
+            << "reloaded_fuel";
+        for(int k=0; k < data.campaigns; k++)
+        {
+            of << " " << (int)r[i][k];
+        }
+        of << "\n";
+    }
+    of << "end outages\n"
+
+        << "begin power_output\n";
+    for(int s=0; s < data.scenario; s++)
+    {
+        of << "scenario " << s << "\n"
+            << "begin type1_plants\n";
+        for(int j=0; j < data.powerplant1; j++)
+        {
+            of << "name " << data.plants1[j].name << " " << data.plants1[j].index;
+            for(size_t t=0; t < data.timesteps; t++)
             {
-                of << " " << c.ha[i + k * data.powerplant2].val();
-            }
-            of << "\n"
-                << "reloaded_fuel";
-            for(int k=0; k < data.campaigns; k++)
-            {
-                of << " " << (int)r[i][k];
+                of << " " << p1[j][t][s];
             }
             of << "\n";
-        }
-        of << "end outages\n"
 
-            << "begin power_output\n";
-        for(int s=0; s < data.scenario; s++)
+        }
+
+        of << "end type1_plants\n"
+            << "begin type2_plants\n";
+        for(int i=0; i < data.powerplant2; i++)
         {
-            of << "scenario " << s << "\n"
-                << "begin type1_plants\n";
-            for(int j=0; j < data.powerplant1; j++)
+            of << "name " << data.plants2[i].name << " " << data.plants2[i].index;
+            for(size_t t=0; t < data.timesteps; t++)
             {
-                of << "name " << data.plants1[j].name << " " << data.plants1[j].index;
-                for(size_t t=0; t < data.timesteps; t++)
-                {
-                    of << " " << p1[j][t][s];
-                }
-                of << "\n";
-
+                of << " " << p2[i][t][s];
             }
-
-            of << "end type1_plants\n"
-                << "begin type2_plants\n";
-            for(int i=0; i < data.powerplant2; i++)
+            of << "\n"
+                << "fuel_variation";
+            for(size_t t=0; t < data.timesteps; t++)
             {
-                of << "name " << data.plants2[i].name << " " << data.plants2[i].index;
-                for(size_t t=0; t < data.timesteps; t++)
-                {
-                    of << " " << p2[i][t][s];
-                }
-                of << "\n"
-                    << "fuel_variation";
-                for(size_t t=0; t < data.timesteps; t++)
-                {
-                    of << " " << (int)x[i][t][s];
-                }
-                of << "\n"
-                    << "remaining_fuel_at_the_end " << x[i][data.timesteps][s] << "\n";
+                of << " " << (int)x[i][t][s];
             }
-            of << "end type2_plants\n";
+            of << "\n"
+                << "remaining_fuel_at_the_end " << x[i][data.timesteps][s] << "\n";
         }
-        of << "end power_output";
+        of << "end type2_plants\n";
+    }
+    of << "end power_output";
 
 
-        
+
 }
 
 int main(int argc, char * argv[])
@@ -432,7 +433,7 @@ int main(int argc, char * argv[])
                     c.status();
                     std::cout << "New min" << c.ha[idx].min() << std::endl;
                 }
-                
+
                 else
                 {
                     std::cout << "It's the end :'(" << std::endl;
